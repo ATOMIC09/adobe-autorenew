@@ -1,5 +1,5 @@
 # 🚀 How to configure and run the script
-*(This script is run on-premises)*
+*(This script has been tested and run on-premises)*
 
 1. Install Docker
 
