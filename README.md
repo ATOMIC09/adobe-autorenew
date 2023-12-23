@@ -1,7 +1,7 @@
 # 🚀 How to configure and run the script
 *(This script has been tested and run on-premises)*
 
-1. Install Docker
+1. Install **Docker**
 
 2. Create `.env` file
 ```
@@ -9,6 +9,16 @@ MY_USERNAME=your_username
 MY_PASSWORD=your_password
 ```
 
-3. Clone this repository 
+3. Clone this repository or create your `Dockerfile` and use `main.go` file from [this original source](https://gist.github.com/buratud/ed6e786287c3a42ef70da2f85c311244)
 
-or create your `Dockerfile` and use `main.go` file from [this original source](https://gist.github.com/buratud/ed6e786287c3a42ef70da2f85c311244)
+4. Build the image by using this command
+`docker build -t adobe-autorenew --build-arg ENV_FILE=.env .`
+
+5. Run the image!
+`docker run -d --restart=unless-stopped --env-file .env -e TZ=Asia/Bangkok adobe-autorenew`
+
+<hr/>
+ 
+`-d` is "detached mode." When you run a container in detached mode, it means the container runs in the background and doesn't block the terminal. 
+
+`--restart=unless-stopped` always restarts the container unless the user explicitly stops it.
