@@ -2,33 +2,29 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
-	"crypto/tls"
 	"time"
-	"math/rand"
 )
 
 func run() {
 	username := os.Getenv("MY_USERNAME")
-    password := os.Getenv("MY_PASSWORD")
+	password := os.Getenv("MY_PASSWORD")
 	mainUrl := "https://software.kmutnb.ac.th/"
 	loginUrl := "https://software.kmutnb.ac.th/login/"
 	claimUrl := "https://software.kmutnb.ac.th/adobe-reserve/add2.php"
-	// client := &http.Client{
-	// CheckRedirect: func(req *http.Request, via []*http.Request) error {
-	//     fmt.Printf("Redirect to %s\n", req.URL.String())
-	//     return nil
-	// },
-	// }
 	tr := &http.Transport{
+		// Somehow the web is insecure for debian 12
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{
 		Transport: tr,
 	}
+	// Obtain session id
 	mainRes, err := client.Get(mainUrl)
 	if err != nil {
 		fmt.Println("Error creating request:", err)
@@ -36,9 +32,7 @@ func run() {
 	}
 	mainRes.Body.Close()
 	mainCookies := mainRes.Cookies()
-	// for _, cookie := range mainCookies {
-	// 	fmt.Printf("%s: %s\n", cookie.Name, cookie.Value)
-	// }
+	// Login with that session id
 	loginPayload := map[string]string{
 		"myusername": username,
 		"mypassword": password,
@@ -64,6 +58,7 @@ func run() {
 	}
 	writeToFile("login_response.html", loginRes.Body)
 	loginRes.Body.Close()
+	// After login, claim it
 	claimPayload := map[string]string{
 		"userId":        "",
 		"date_expire":   "2027-02-08",
@@ -89,24 +84,27 @@ func run() {
 }
 
 func main() {
-    for {
-        run()
-        fmt.Println("Claimed om Monday at", time.Now().Format("2006-01-02 15:04:05"))
-        // Calculate the duration until next Monday 00:00
-        currentTime := time.Now()
-        daysUntilMonday := int(time.Monday - currentTime.Weekday())
-        if daysUntilMonday < 0 {
-            daysUntilMonday += 7
-        } else {
-			// Fixed bug 1 where it schedule today if it's Monday, hence infinite loop for entire of that day
+	// Guarantee to run once, then next Monday from 06:00 to 07:59
+	for {
+		run()
+		fmt.Println("Claimed on Monday at", time.Now().Format("2006-01-02 15:04:05"))
+		// Calculate the duration until next Monday 00:00
+		currentTime := time.Now()
+		daysUntilMonday := int(time.Monday - currentTime.Weekday())
+		if daysUntilMonday < 0 {
+			daysUntilMonday += 7
+		} else {
+			// Fixed bug 1 where it schedules today if it's Monday, hence infinite loop for entire of that day
 			daysUntilMonday = 7
 		}
-        targetTime := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day()+daysUntilMonday, 6 + rand.Intn(2), rand.Intn(60), 0, 0, time.Local)
-        duration := targetTime.Sub(currentTime)
-        timer := time.NewTimer(duration)
-        <-timer.C
-    }
+		// Schedule to run on next Monday around 6:00 to 7:59 inclusive
+		targetTime := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day()+daysUntilMonday, 6+rand.Intn(2), rand.Intn(60), 0, 0, time.Local)
+		duration := targetTime.Sub(currentTime)
+		timer := time.NewTimer(duration)
+		<-timer.C
+	}
 }
+
 func writeToFile(filename string, content io.ReadCloser) {
 	var bodyBytes bytes.Buffer
 	_, err := io.Copy(&bodyBytes, content)
